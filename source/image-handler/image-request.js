@@ -26,6 +26,7 @@ class ImageRequest {
       this.bucket = this.parseImageBucket(event, this.requestType);
       this.key = this.parseImageKey(event, this.requestType);
       this.edits = this.parseImageEdits(event, this.requestType);
+      this.fallback = this.parseFallback(event, this.requestType);
       this.originalImage = await this.getOriginalImage(this.bucket, this.key);
 
       /* Decide the output format of the image.
@@ -168,6 +169,33 @@ class ImageRequest {
         status: 400,
         code: 'ImageEdits::CannotParseEdits',
         message: 'The edits you provided could not be parsed. Please check the syntax of your request and refer to the documentation for additional guidance.'
+      });
+    }
+  }
+
+  /**
+   * Parses the edits to be made to the original image.
+   * @param {String} event - Lambda request body.
+   * @param {String} requestType - Image handler request type.
+   */
+  parseFallback(event, requestType) {
+    if (requestType === "Default") {
+      const decoded = this.decodeRequest(event);
+      return decoded.fallback;
+    } else if (requestType === "Thumbor") {
+      const thumborMapping = new ThumborMapping();
+      thumborMapping.process(event);
+      return thumborMapping.fallback;
+    } else if (requestType === "Custom") {
+      const thumborMapping = new ThumborMapping();
+      const parsedPath = thumborMapping.parseCustomPath(event.path);
+      thumborMapping.process(parsedPath);
+      return thumborMapping.fallback;
+    } else {
+      throw ({
+        status: 400,
+        code: 'ImageEdits::CannotParseFallback',
+        message: 'The fallback you provided could not be parsed. Please check the syntax of your request and refer to the documentation for additional guidance.'
       });
     }
   }

@@ -24,12 +24,20 @@ class ImageHandler {
     const originalImage = request.originalImage;
     const edits = request.edits;
     if (edits !== undefined) {
-      const modifiedImage = await this.applyEdits(originalImage, edits);
-      if (request.outputFormat !== undefined) {
-        modifiedImage.toFormat(request.outputFormat);
+      try {
+        const modifiedImage = await this.applyEdits(originalImage, edits);
+        if (request.outputFormat !== undefined) {
+          modifiedImage.toFormat(request.outputFormat);
+        }
+        const bufferImage = await modifiedImage.toBuffer();
+        return bufferImage.toString('base64');
+      } catch (err) {
+        if (request.fallback === 'origin') {
+          return originalImage.toString('base64');
+        } else {
+          throw err;
+        }
       }
-      const bufferImage = await modifiedImage.toBuffer();
-      return bufferImage.toString('base64');
     } else {
       return originalImage.toString('base64');
     }
